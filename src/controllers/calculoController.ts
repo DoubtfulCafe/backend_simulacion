@@ -1,63 +1,112 @@
 import { Request, Response } from "express";
 
-// Controlador para calcular el IMC y la TMB
+// Datos del suplemento explícitos en el código
+const suplemento = {
+  nombre: "Ensure Advance",
+  calorias_100_gramos: 426,
+  proteinas_100_gramos: 15.9,
+  lipidos_100_gramos: 14,
+  carbohidratos_100_gramos: 55.86,
+  copas_porcion: 6,
+  equivalente_gramos_procion: 54.1,
+};
+
 export const calcularIMCyTMB = (req: Request, res: Response): void => {
-  const { genero, peso, talla, edad, factor_estres } = req.body;
+  try {
+    const { genero, peso, talla, edad, factor_estres, dias_tratamiento } = req.body;
 
-  // Validación básica
-  if (!genero || !peso || !talla || !edad || !factor_estres) {
-    res.status(400).json({ error: "Todos los campos son requeridos" });
-    return;
-  }
+    // Validaciones
+    if (!genero || !peso || !talla || !edad || !factor_estres || !dias_tratamiento) {
+      res.status(400).json({ error: "Todos los campos son requeridos" });
+      return;
+    }
 
-    // Validación del factor de estrés (opcional, si deseas verificar valores específicos)
     const factoresValidos = [1.2, 1.3, 1.5, 1.7, 2.0];
     if (!factoresValidos.includes(factor_estres)) {
       res.status(400).json({ error: "Factor de estrés no válido" });
       return;
     }
 
+    if (dias_tratamiento <= 0 || !Number.isInteger(dias_tratamiento)) {
+      res.status(400).json({ error: "El número de días de tratamiento debe ser un entero positivo" });
+      return;
+    }
 
+    // Cálculo del IMC
+    const imc = peso / (talla ** 2);
+    let clasificacionIMC = "";
+    if (imc < 18.5) clasificacionIMC = "Bajo peso";
+    else if (imc < 25) clasificacionIMC = "Peso normal";
+    else if (imc < 30) clasificacionIMC = "Sobrepeso";
+    else if (imc < 35) clasificacionIMC = "Obesidad grado 1";
+    else if (imc < 40) clasificacionIMC = "Obesidad grado 2";
+    else clasificacionIMC = "Obesidad grado 3 (mórbida)";
 
-  // Cálculo del IMC
-  const imc = peso / (talla ** 2);
+    // Cálculo de la TMB ajustada
+    let tmb: number;
+    if (genero === "Masculino") {
+      tmb = 10 * peso + 6.25 * (talla * 100) - 5 * edad + 5;
+    } else if (genero === "Femenino") {
+      tmb = 10 * peso + 6.25 * (talla * 100) - 5 * edad - 161;
+    } else {
+      res.status(400).json({ error: "Género no válido" });
+      return;
+    }
 
-   // Determinar clasificación del IMC según la tabla de la OMS
-   let clasificacion_imc = "";
-   if (imc < 18.5) {
-     clasificacion_imc = "Bajo peso";
-   } else if (imc < 25) {
-     clasificacion_imc = "Peso normal";
-   } else if (imc < 30) {
-     clasificacion_imc = "Sobrepeso";
-   } else if (imc < 35) {
-     clasificacion_imc = "Obesidad grado 1";
-   } else if (imc < 40) {
-     clasificacion_imc = "Obesidad grado 2";
-   } else {
-     clasificacion_imc = "Obesidad grado 3 (mórbida)";
-   }
+    const tmbAjustada = tmb * factor_estres;
 
-  // Cálculo de la TMB
-  let tmb;
-  if (genero === "Masculino") {
-    tmb = 10 * peso + 6.25 * (talla * 100) - 5 * edad + 5;
-  } else if (genero === "Femenino") {
-    tmb = 10 * peso + 6.25 * (talla * 100) - 5 * edad - 161;
-  } else {
-    res.status(400).json({ error: "Género no válido" });
-    return;
+    // Generar resultados por día
+    let gramosTotales = 0;
+    const resultadosPorDia = [];
+    for (let dia = 1; dia <= dias_tratamiento; dia++) {
+      // Factor de tolerancia: Día 1 = 50%, Resto aleatorio (50%, 75%, 100%)
+      const tolerancia =
+        dia === 1 ? 0.5 : [0.5, 0.75, 1.0][Math.floor(Math.random() * 3)];
+
+      const caloriasDia = tmbAjustada * tolerancia;
+      const caloriasPorGramo = suplemento.calorias_100_gramos / 100;
+      const gramosSuplemento = caloriasDia / caloriasPorGramo;
+
+      gramosTotales += gramosSuplemento;
+
+      const copasNecesarias = Math.ceil(
+        (gramosSuplemento / suplemento.equivalente_gramos_procion) *
+          suplemento.copas_porcion
+      );
+      const preparaciones = Math.ceil(copasNecesarias / suplemento.copas_porcion);
+
+      const intervaloHoras = 24 / preparaciones;
+      const horas = Math.floor(intervaloHoras);
+      const minutos = Math.round((intervaloHoras - horas) * 60);
+
+      resultadosPorDia.push({
+        dia,
+        porcentajeTolerancia: tolerancia * 100,
+        caloriasDia: caloriasDia.toFixed(2),
+        suplementoGramos: gramosSuplemento.toFixed(2),
+        preparaciones,
+        intervaloPreparaciones: { horas, minutos },
+      });
+    }
+
+    // Calcular latas necesarias
+    const latas800g = Math.floor(gramosTotales / 800);
+    const gramosRestantes = gramosTotales % 800;
+    const latas400g = Math.ceil(gramosRestantes / 400);
+
+    // Respuesta final
+    res.json({
+      imc: imc.toFixed(2),
+      clasificacionIMC,
+      tmbAjustada: tmbAjustada.toFixed(2),
+      resultadosPorDia,
+      resumenTotal: {
+        gramosTotales: gramosTotales.toFixed(2),
+        latas800g,
+        latas400g,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-
-   // Cálculo de la TMB ajustada al factor de estrés
-   const tmb_ajustada = tmb * factor_estres;
-
-
-  // Respuesta con los resultados
-  res.json({
-    imc: imc.toFixed(2),
-    clasificacion_imc,
-    tmb: tmb.toFixed(2),
-    tmb_ajustada: tmb_ajustada.toFixed(2)
-  });
 };
