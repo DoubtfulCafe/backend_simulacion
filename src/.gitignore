@@ -1,0 +1,24 @@
+# Node.js
+node_modules/   # Dependencias instaladas (npm install las reinstala)
+npm-debug.log*  # Archivos de depuración de npm
+package-lock.json # Evita conflictos, opcional para proyectos en equipo
+
+# TypeScript
+dist/           # Archivos compilados
+*.tsbuildinfo   # Archivos de seguimiento de TypeScript
+
+# Variables de entorno
+.env            # Configuración sensible (como claves de API y cadenas de conexión)
+
+# Logs
+*.log           # Archivos de registro (como error.log)
+logs/           # Carpeta de logs
+pids/           # Archivos de procesos
+
+# IDEs
+.vscode/        # Configuraciones específicas de Visual Studio Code
+.idea/          # Configuraciones específicas de IntelliJ/WebStorm
+.DS_Store       # Archivos específicos de macOS
+
+# Sistema operativo
+Thumbs.db       # Archivos generados por Windows
