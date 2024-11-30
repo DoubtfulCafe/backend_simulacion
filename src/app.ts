@@ -2,6 +2,9 @@ import express, { Application } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 
+// Importa rutas
+import calculoRoutes from "./routes/calculoRoutes";
+
 dotenv.config();
 
 const app: Application = express();
@@ -10,13 +13,12 @@ const app: Application = express();
 app.use(cors());
 app.use(express.json());
 
-// Rutas básicas
-app.get("/", (req, res) => {
-  res.send("¡Servidor funcionando!");
+// Rutas
+app.use("/api/calculo", calculoRoutes);
+
+app.use("/api/calculo", (req, res) => {
+  res.send("Ruta de cálculo conectada");
 });
 
-import userRoutes from "./routes/userRoutes";
-
-app.use("/api/users", userRoutes);
 
 export default app;
