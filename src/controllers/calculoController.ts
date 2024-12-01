@@ -21,16 +21,19 @@ export const calcularIMCyTMB = (req: Request, res: Response): void => {
       return;
     }
 
-    const factoresValidos = [1.2, 1.3, 1.5, 1.7, 2.0];
-    if (!factoresValidos.includes(factor_estres)) {
-      res.status(400).json({ error: "Factor de estrés no válido" });
-      return;
-    }
+    const factorEstresNumerico = parseFloat(factor_estres);
+const factoresValidos = [1.2, 1.3, 1.5, 1.7, 2.0];
+if (!factoresValidos.includes(factorEstresNumerico)) {
+  res.status(400).json({ error: "Factor de estrés no válido" });
+  return;
+}
 
-    if (dias_tratamiento <= 0 || !Number.isInteger(dias_tratamiento)) {
-      res.status(400).json({ error: "El número de días de tratamiento debe ser un entero positivo" });
-      return;
-    }
+const diasTratamiento = parseInt(dias_tratamiento, 10);
+
+if (diasTratamiento <= 0 || !Number.isInteger(diasTratamiento)) {
+  res.status(400).json({ error: "El número de días de tratamiento debe ser un entero positivo" });
+  return;
+}
 
     // Cálculo del IMC
     const imc = peso / (talla ** 2);
